@@ -116,3 +116,87 @@ func (fs *FileSystem) Chown(name string, uid, gid int) error {
 	fs.cache.Chown(name, uid, gid) // Best effort for cache
 	return err
 }
+
+// Truncate truncates a file to the specified size in both filesystems.
+func (fs *FileSystem) Truncate(name string, size int64) error {
+	// Open file for writing (but don't truncate with O_TRUNC)
+	f, err := fs.OpenFile(name, os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Truncate to the specified size
+	return f.Truncate(size)
+}
+
+// RemoveAll removes a path and any children it contains in both filesystems.
+func (fs *FileSystem) RemoveAll(path string) error {
+	// Remove from primary first
+	var err error
+	if remover, ok := fs.primary.(interface{ RemoveAll(string) error }); ok {
+		err = remover.RemoveAll(path)
+	} else {
+		err = removeAll(fs.primary, path)
+	}
+
+	// Best effort removal from cache
+	if remover, ok := fs.cache.(interface{ RemoveAll(string) error }); ok {
+		remover.RemoveAll(path)
+	} else {
+		removeAll(fs.cache, path)
+	}
+
+	return err
+}
+
+// removeAll is a helper that recursively removes a path.
+func removeAll(filer absfs.Filer, path string) error {
+	// Open the file to check if it's a directory
+	f, err := filer.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return err
+	}
+
+	// Get FileInfo
+	info, err := f.Stat()
+	closeErr := f.Close()
+	if err != nil {
+		return err
+	}
+
+	// If it's not a directory, just remove it
+	if !info.IsDir() {
+		return filer.Remove(path)
+	}
+
+	// For directories, recursively remove contents
+	f, err = filer.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return err
+	}
+
+	// Read all directory entries and remove them recursively
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if name == "." || name == ".." {
+			continue
+		}
+		fullPath := path + string(os.PathSeparator) + name
+		if err := removeAll(filer, fullPath); err != nil {
+			return err
+		}
+	}
+
+	// Finally, remove the directory itself
+	if err := filer.Remove(path); err != nil {
+		return err
+	}
+
+	return closeErr
+}

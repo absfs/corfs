@@ -118,10 +118,36 @@ func (f *File) Truncate(size int64) error {
 
 // Readdir reads directory entries from the primary file.
 func (f *File) Readdir(n int) ([]os.FileInfo, error) {
-	return f.primary.Readdir(n)
+	entries, err := f.primary.Readdir(n)
+	if err != nil {
+		return entries, err
+	}
+
+	// Filter out "." and ".." entries to match standard filesystem behavior
+	filtered := make([]os.FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Name() != "." && entry.Name() != ".." {
+			filtered = append(filtered, entry)
+		}
+	}
+
+	return filtered, nil
 }
 
 // Readdirnames reads directory entry names from the primary file.
 func (f *File) Readdirnames(n int) ([]string, error) {
-	return f.primary.Readdirnames(n)
+	names, err := f.primary.Readdirnames(n)
+	if err != nil {
+		return names, err
+	}
+
+	// Filter out "." and ".." entries to match standard filesystem behavior
+	filtered := make([]string, 0, len(names))
+	for _, name := range names {
+		if name != "." && name != ".." {
+			filtered = append(filtered, name)
+		}
+	}
+
+	return filtered, nil
 }
