@@ -18,6 +18,11 @@ func TestCorFS_WrapperSuite(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Ensure temp directory exists (memfs doesn't create /tmp by default)
+	if err := baseFS.MkdirAll(baseFS.TempDir(), 0755); err != nil {
+		t.Fatal(err)
+	}
+
 	// Factory creates a corfs wrapper around the base filesystem
 	factory := func(base absfs.FileSystem) (absfs.FileSystem, error) {
 		// Create a separate cache filesystem
@@ -66,6 +71,11 @@ func TestCorFS_Suite(t *testing.T) {
 	corFilesystem := corfs.New(primary, cache)
 	fs := absfs.ExtendFiler(corFilesystem)
 
+	// Ensure temp directory exists (memfs doesn't create /tmp by default)
+	if err := fs.MkdirAll(fs.TempDir(), 0755); err != nil {
+		t.Fatal(err)
+	}
+
 	// Configure features based on what corfs supports
 	// corfs delegates to underlying filesystems (memfs in this case)
 	// so it supports what memfs supports
@@ -104,6 +114,11 @@ func TestCorFS_QuickCheck(t *testing.T) {
 	// Create corfs and extend to FileSystem
 	corFilesystem := corfs.New(primary, cache)
 	fs := absfs.ExtendFiler(corFilesystem)
+
+	// Ensure temp directory exists (memfs doesn't create /tmp by default)
+	if err := fs.MkdirAll(fs.TempDir(), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	suite := &fstesting.Suite{
 		FS: fs,
