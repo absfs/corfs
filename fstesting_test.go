@@ -31,11 +31,6 @@ func TestCorFS_WrapperSuite(t *testing.T) {
 			return nil, err
 		}
 
-		// Ensure test directory exists in cache (corfs tries to create in both filesystems)
-		if err := cacheFS.MkdirAll("/test", 0755); err != nil {
-			return nil, err
-		}
-
 		// corfs.New returns a *corfs.FileSystem which implements absfs.Filer
 		// We need to extend it to absfs.FileSystem
 		corFilesystem := corfs.New(base, cacheFS)
@@ -46,15 +41,10 @@ func TestCorFS_WrapperSuite(t *testing.T) {
 		Factory:        factory,
 		BaseFS:         baseFS,
 		Name:           "corfs",
-		TransformsData: false,   // corfs passes data through unchanged
-		TransformsMeta: false,   // corfs preserves metadata
-		ReadOnly:       false,   // corfs supports write operations
-		TestDir:        "/test", // Use /test instead of /tmp to avoid path issues
-	}
-
-	// Ensure test directory exists
-	if err := baseFS.MkdirAll("/test", 0755); err != nil {
-		t.Fatal(err)
+		TransformsData: false, // corfs passes data through unchanged
+		TransformsMeta: false, // corfs preserves metadata
+		ReadOnly:       false, // corfs supports write operations
+		TestDir:        "/",   // Use root directory which always exists
 	}
 
 	suite.Run(t)
@@ -107,12 +97,7 @@ func TestCorFS_Suite(t *testing.T) {
 	suite := &fstesting.Suite{
 		FS:       fs,
 		Features: features,
-		TestDir:  "/test", // Use /test instead of /tmp to avoid path issues
-	}
-
-	// Ensure test directory exists
-	if err := fs.MkdirAll("/test", 0755); err != nil {
-		t.Fatal(err)
+		TestDir:  "/", // Use root directory which always exists
 	}
 
 	suite.Run(t)
@@ -152,12 +137,7 @@ func TestCorFS_QuickCheck(t *testing.T) {
 			AtomicRename:  true,
 			LargeFiles:    true,
 		},
-		TestDir: "/test", // Use /test instead of /tmp to avoid path issues
-	}
-
-	// Ensure test directory exists
-	if err := fs.MkdirAll("/test", 0755); err != nil {
-		t.Fatal(err)
+		TestDir: "/", // Use root directory which always exists
 	}
 
 	suite.QuickCheck(t)
