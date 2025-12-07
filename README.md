@@ -1,9 +1,9 @@
 # CorFS - Cache on Read FileSystem
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/absfs/corfs/blob/master/LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/absfs/corfs.svg)](https://pkg.go.dev/github.com/absfs/corfs)
 [![Go Report Card](https://goreportcard.com/badge/github.com/absfs/corfs)](https://goreportcard.com/report/github.com/absfs/corfs)
-[![Test](https://github.com/absfs/corfs/actions/workflows/test.yml/badge.svg)](https://github.com/absfs/corfs/actions/workflows/test.yml)
+[![CI](https://github.com/absfs/corfs/actions/workflows/ci.yml/badge.svg)](https://github.com/absfs/corfs/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 The `corfs` package implements a Cache-on-Read FileSystem that wraps two `absfs.Filer` implementations. It reads from a primary filesystem and caches content to a secondary filesystem on successful reads, providing a two-tier caching system.
 
