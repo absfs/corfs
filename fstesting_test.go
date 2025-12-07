@@ -31,8 +31,8 @@ func TestCorFS_WrapperSuite(t *testing.T) {
 			return nil, err
 		}
 
-		// Ensure temp directory exists in cache (memfs doesn't create /tmp by default)
-		if err := cacheFS.MkdirAll(cacheFS.TempDir(), 0755); err != nil {
+		// Ensure test directory exists in cache (corfs tries to create in both filesystems)
+		if err := cacheFS.MkdirAll("/test", 0755); err != nil {
 			return nil, err
 		}
 
