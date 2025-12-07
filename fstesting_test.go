@@ -46,9 +46,9 @@ func TestCorFS_WrapperSuite(t *testing.T) {
 		Factory:        factory,
 		BaseFS:         baseFS,
 		Name:           "corfs",
-		TransformsData: false, // corfs passes data through unchanged
-		TransformsMeta: false, // corfs preserves metadata
-		ReadOnly:       false, // corfs supports write operations
+		TransformsData: false,   // corfs passes data through unchanged
+		TransformsMeta: false,   // corfs preserves metadata
+		ReadOnly:       false,   // corfs supports write operations
 		TestDir:        "/test", // Use /test instead of /tmp to avoid path issues
 	}
 
