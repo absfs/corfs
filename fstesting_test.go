@@ -49,6 +49,12 @@ func TestCorFS_WrapperSuite(t *testing.T) {
 		TransformsData: false, // corfs passes data through unchanged
 		TransformsMeta: false, // corfs preserves metadata
 		ReadOnly:       false, // corfs supports write operations
+		TestDir:        "/test", // Use /test instead of /tmp to avoid path issues
+	}
+
+	// Ensure test directory exists
+	if err := baseFS.MkdirAll("/test", 0755); err != nil {
+		t.Fatal(err)
 	}
 
 	suite.Run(t)
@@ -101,6 +107,12 @@ func TestCorFS_Suite(t *testing.T) {
 	suite := &fstesting.Suite{
 		FS:       fs,
 		Features: features,
+		TestDir:  "/test", // Use /test instead of /tmp to avoid path issues
+	}
+
+	// Ensure test directory exists
+	if err := fs.MkdirAll("/test", 0755); err != nil {
+		t.Fatal(err)
 	}
 
 	suite.Run(t)
@@ -140,6 +152,12 @@ func TestCorFS_QuickCheck(t *testing.T) {
 			AtomicRename:  true,
 			LargeFiles:    true,
 		},
+		TestDir: "/test", // Use /test instead of /tmp to avoid path issues
+	}
+
+	// Ensure test directory exists
+	if err := fs.MkdirAll("/test", 0755); err != nil {
+		t.Fatal(err)
 	}
 
 	suite.QuickCheck(t)
