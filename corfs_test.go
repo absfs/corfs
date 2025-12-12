@@ -1,6 +1,7 @@
 package corfs
 
 import (
+	"io/fs"
 	"os"
 	"testing"
 	"time"
@@ -33,6 +34,11 @@ func (m *mockFiler) Stat(name string) (os.FileInfo, error)             { return 
 func (m *mockFiler) Chmod(name string, mode os.FileMode) error         { return nil }
 func (m *mockFiler) Chtimes(name string, atime, mtime time.Time) error { return nil }
 func (m *mockFiler) Chown(name string, uid, gid int) error             { return nil }
+func (m *mockFiler) ReadDir(name string) ([]fs.DirEntry, error)        { return nil, nil }
+func (m *mockFiler) ReadFile(name string) ([]byte, error)              { return nil, nil }
+func (m *mockFiler) Sub(dir string) (fs.FS, error) {
+	return absfs.FilerToFS(m, dir)
+}
 
 type mockFile struct {
 	name   string
@@ -53,6 +59,7 @@ func (f *mockFile) ReadAt(b []byte, off int64) (int, error)      { return 0, nil
 func (f *mockFile) WriteAt(b []byte, off int64) (int, error)     { return len(b), nil }
 func (f *mockFile) WriteString(s string) (int, error)            { return len(s), nil }
 func (f *mockFile) Truncate(size int64) error                    { return nil }
+func (f *mockFile) ReadDir(n int) ([]fs.DirEntry, error)         { return nil, nil }
 
 func TestNew(t *testing.T) {
 	primary := newMockFiler()
@@ -438,6 +445,9 @@ func (m *mockFilerWithError) Stat(name string) (os.FileInfo, error)             
 func (m *mockFilerWithError) Chmod(name string, mode os.FileMode) error         { return m.err }
 func (m *mockFilerWithError) Chtimes(name string, atime, mtime time.Time) error { return m.err }
 func (m *mockFilerWithError) Chown(name string, uid, gid int) error             { return m.err }
+func (m *mockFilerWithError) ReadDir(name string) ([]fs.DirEntry, error)        { return nil, m.err }
+func (m *mockFilerWithError) ReadFile(name string) ([]byte, error)              { return nil, m.err }
+func (m *mockFilerWithError) Sub(dir string) (fs.FS, error) { return nil, m.err }
 
 // Benchmarks
 

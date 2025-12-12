@@ -4,6 +4,7 @@
 package corfs
 
 import (
+	"io/fs"
 	"os"
 	"time"
 
@@ -148,6 +149,165 @@ func (fs *FileSystem) RemoveAll(path string) error {
 	}
 
 	return err
+}
+
+// ReadDir reads the named directory and returns a list of directory entries.
+func (fs *FileSystem) ReadDir(name string) ([]fs.DirEntry, error) {
+	entries, err := fs.primary.ReadDir(name)
+	if err != nil {
+		// Try cache as fallback
+		return fs.cache.ReadDir(name)
+	}
+	return entries, nil
+}
+
+// ReadFile reads the named file and returns its contents.
+func (fs *FileSystem) ReadFile(name string) ([]byte, error) {
+	data, err := fs.primary.ReadFile(name)
+	if err != nil {
+		// Try cache as fallback
+		return fs.cache.ReadFile(name)
+	}
+
+	// On successful read, cache the data
+	if err == nil && len(data) > 0 {
+		// Best effort cache write
+		fs.cache.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if cacheFile, cacheErr := fs.cache.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644); cacheErr == nil {
+			cacheFile.Write(data)
+			cacheFile.Close()
+		}
+	}
+
+	return data, nil
+}
+
+// Sub returns an fs.FS corresponding to the subtree rooted at dir.
+func (fs *FileSystem) Sub(dir string) (fs.FS, error) {
+	return absfs.FilerToFS(fs, dir)
+}
+
+var ErrNotDir = os.ErrInvalid
+
+// subCorFS wraps a corfs FileSystem for a subdirectory.
+type subCorFS struct {
+	primary absfs.Filer
+	cache   absfs.Filer
+	dir     string
+}
+
+func (s *subCorFS) OpenFile(name string, flag int, perm os.FileMode) (absfs.File, error) {
+	primaryFile, primaryErr := s.primary.OpenFile(name, flag, perm)
+
+	if flag&(os.O_CREATE|os.O_WRONLY|os.O_RDWR) != 0 {
+		if primaryErr != nil {
+			return primaryFile, primaryErr
+		}
+		var cacheFile absfs.File
+		if s.cache != nil {
+			cacheFile, _ = s.cache.OpenFile(name, flag, perm)
+		}
+		return &File{
+			primary: primaryFile,
+			cache:   cacheFile,
+			name:    name,
+			fs:      nil, // subCorFS doesn't need fs reference
+		}, nil
+	}
+
+	if primaryErr != nil {
+		if s.cache != nil {
+			cacheFile, cacheErr := s.cache.OpenFile(name, flag, perm)
+			if cacheErr != nil {
+				return nil, primaryErr
+			}
+			return cacheFile, nil
+		}
+		return nil, primaryErr
+	}
+
+	return &File{
+		primary: primaryFile,
+		cache:   nil,
+		name:    name,
+		fs:      nil,
+	}, nil
+}
+
+func (s *subCorFS) Mkdir(name string, perm os.FileMode) error {
+	err := s.primary.Mkdir(name, perm)
+	if s.cache != nil {
+		s.cache.Mkdir(name, perm)
+	}
+	return err
+}
+
+func (s *subCorFS) Remove(name string) error {
+	err := s.primary.Remove(name)
+	if s.cache != nil {
+		s.cache.Remove(name)
+	}
+	return err
+}
+
+func (s *subCorFS) Rename(oldpath, newpath string) error {
+	err := s.primary.Rename(oldpath, newpath)
+	if s.cache != nil {
+		s.cache.Rename(oldpath, newpath)
+	}
+	return err
+}
+
+func (s *subCorFS) Stat(name string) (os.FileInfo, error) {
+	info, err := s.primary.Stat(name)
+	if err != nil && s.cache != nil {
+		return s.cache.Stat(name)
+	}
+	return info, err
+}
+
+func (s *subCorFS) Chmod(name string, mode os.FileMode) error {
+	err := s.primary.Chmod(name, mode)
+	if s.cache != nil {
+		s.cache.Chmod(name, mode)
+	}
+	return err
+}
+
+func (s *subCorFS) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	err := s.primary.Chtimes(name, atime, mtime)
+	if s.cache != nil {
+		s.cache.Chtimes(name, atime, mtime)
+	}
+	return err
+}
+
+func (s *subCorFS) Chown(name string, uid, gid int) error {
+	err := s.primary.Chown(name, uid, gid)
+	if s.cache != nil {
+		s.cache.Chown(name, uid, gid)
+	}
+	return err
+}
+
+func (s *subCorFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	entries, err := s.primary.ReadDir(name)
+	if err != nil && s.cache != nil {
+		return s.cache.ReadDir(name)
+	}
+	return entries, err
+}
+
+func (s *subCorFS) ReadFile(name string) ([]byte, error) {
+	data, err := s.primary.ReadFile(name)
+	if err != nil && s.cache != nil {
+		return s.cache.ReadFile(name)
+	}
+	return data, err
+}
+
+func (s *subCorFS) Sub(dir string) (fs.FS, error) {
+	return absfs.FilerToFS(s, dir)
 }
 
 // removeAll is a helper that recursively removes a path.

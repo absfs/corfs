@@ -1,6 +1,7 @@
 package corfs
 
 import (
+	"io/fs"
 	"os"
 
 	"github.com/absfs/absfs"
@@ -150,4 +151,9 @@ func (f *File) Readdirnames(n int) ([]string, error) {
 	}
 
 	return filtered, nil
+}
+
+// ReadDir reads directory entries from the primary file.
+func (f *File) ReadDir(n int) ([]fs.DirEntry, error) {
+	return f.primary.ReadDir(n)
 }
